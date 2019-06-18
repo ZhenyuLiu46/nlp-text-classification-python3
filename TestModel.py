@@ -1,4 +1,6 @@
 # Loading the data set - training data.
+from nltk.stem.snowball import SnowballStemmer
+import nltk
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import SGDClassifier
 import numpy as np
@@ -99,3 +101,67 @@ gs_clf_svm = gs_clf_svm.fit(twenty_train.data, twenty_train.target)
 
 print(gs_clf_svm.best_score_)
 gs_clf_svm.best_params_
+
+# NLTK
+# Removing stop words and Train
+text_clf = Pipeline([('vect', CountVectorizer(stop_words='english')),
+                     ('tfidf', TfidfTransformer()), ('clf', MultinomialNB())])
+text_clf = text_clf.fit(twenty_train.data, twenty_train.target)
+# Train and Performance of NB Classifier, for stopping words
+twenty_test = fetch_20newsgroups(subset='test', shuffle=True)
+predicted = text_clf.predict(twenty_test.data)
+np.mean(predicted == twenty_test.target)
+
+# Grid Search
+parameters = {'vect__ngram_range': [(1, 1), (1, 2)], 'tfidf__use_idf': (
+    True, False), 'clf__alpha': (1e-2, 1e-3)}
+gs_clf = GridSearchCV(text_clf, parameters, n_jobs=-1)
+gs_clf = gs_clf.fit(twenty_train.data, twenty_train.target)
+# To see the best mean score and the params using the stopping word
+# ?are these using test case? corss-validation
+print(gs_clf.best_score_)
+gs_clf.best_params_
+
+# Train using best params as showed above
+text_clf = Pipeline([('vect', CountVectorizer()), ('tfidf', TfidfTransformer(
+    use_idf=False)), ('clf', MultinomialNB(alpha=0.01))])
+text_clf = text_clf.fit(twenty_train.data, twenty_train.target)
+
+# performance of NB Classifier
+# Testing with the best params
+twenty_test = fetch_20newsgroups(subset='test', shuffle=True)
+predicted = text_clf.predict(twenty_test.data)
+np.mean(predicted == twenty_test.target)
+
+# NLTK
+# Removing stop words, set fit_prior = false and Build
+text_clf = Pipeline([('vect', CountVectorizer(stop_words='english')),
+                     ('tfidf', TfidfTransformer()), ('clf', MultinomialNB(fit_prior=False))])
+text_clf = text_clf.fit(twenty_train.data, twenty_train.target)
+
+# Train and Performance of NB Classifier, for using stop words and fit_prior = false
+twenty_test = fetch_20newsgroups(subset='test', shuffle=True)
+predicted = text_clf.predict(twenty_test.data)
+np.mean(predicted == twenty_test.target)
+
+# stemming
+nltk.download()
+stemmer = SnowballStemmer("english", ignore_stopwords=True)
+
+
+class StemmedCountVectorizer(CountVectorizer):
+    def build_analyzer(self):
+        analyzer = super(StemmedCountVectorizer, self).build_analyzer()
+        return lambda doc: ([stemmer.stem(w) for w in analyzer(doc)])
+
+
+stemmed_count_vect = StemmedCountVectorizer(stop_words='english')
+
+text_mnb_stemmed = Pipeline([('vect', stemmed_count_vect), ('tfidf', TfidfTransformer()),
+                             ('mnb', MultinomialNB(fit_prior=False))])
+
+text_mnb_stemmed = text_mnb_stemmed.fit(twenty_train.data, twenty_train.target)
+
+predicted_mnb_stemmed = text_mnb_stemmed.predict(twenty_test.data)
+
+np.mean(predicted_mnb_stemmed == twenty_test.target)
