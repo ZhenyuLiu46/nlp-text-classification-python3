@@ -1,4 +1,6 @@
 # Loading the data set - training data.
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import SGDClassifier
 import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.naive_bayes import MultinomialNB
@@ -58,3 +60,42 @@ text_clf = text_clf.fit(twenty_train.data, twenty_train.target)
 twenty_test = fetch_20newsgroups(subset='test', shuffle=True)
 predicted = text_clf.predict(twenty_test.data)
 np.mean(predicted == twenty_test.target)
+
+# Using Support Vector Machines and calculate performace, here use SGDC
+text_clf_svm = Pipeline([('vect', CountVectorizer()), ('tfidf', TfidfTransformer()),
+                         ('clf-svm', SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, max_iter=5, random_state=42))])
+text_clf_svm = text_clf_svm.fit(twenty_train.data, twenty_train.target)
+predicted_svm = text_clf_svm.predict(twenty_test.data)
+np.mean(predicted_svm == twenty_test.target)
+
+# Grid Search
+# Here, we are creating a list of parameters for which we would like to do performance tuning.
+# All the parameters name start with the classifier name (remember the arbitrary name we gave).
+# E.g. vect__ngram_range; here we are telling to use unigram and bigrams and choose the one which is optimal.
+# use_idf Enable inverse-document-frequency reweighting.
+# clf_alpha Constant that multiplies the regularization term.
+parameters = {'vect__ngram_range': [(1, 1), (1, 2)], 'tfidf__use_idf': (
+    True, False), 'clf__alpha': (1e-2, 1e-3)}
+
+# Next, we create an instance of the grid search by passing the classifier, parameters
+# and n_jobs=-1 which tells to use multiple cores from user machine.
+# first use naive
+gs_clf = GridSearchCV(text_clf, parameters, n_jobs=-1)
+gs_clf = gs_clf.fit(twenty_train.data, twenty_train.target)
+
+# To see the best mean score and the params, run the following code
+
+print(gs_clf.best_score_)
+gs_clf.best_params_
+
+# Output for above should be: The accuracy has now increased to ~90.6% for the NB classifier.
+# and the corresponding parameters are {‘clf__alpha’: 0.01, ‘tfidf__use_idf’: True, ‘vect__ngram_range’: (1, 2)}.
+
+# similarly doing grid search for SVM
+parameters_svm = {'vect__ngram_range': [(1, 1), (1, 2)], 'tfidf__use_idf': (
+    True, False), 'clf-svm__alpha': (1e-2, 1e-3)}
+gs_clf_svm = GridSearchCV(text_clf_svm, parameters_svm, n_jobs=-1)
+gs_clf_svm = gs_clf_svm.fit(twenty_train.data, twenty_train.target)
+
+print(gs_clf_svm.best_score_)
+gs_clf_svm.best_params_
