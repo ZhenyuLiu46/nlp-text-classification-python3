@@ -1,16 +1,15 @@
-
 import csv
 import numpy as np
-from os.path import realpath, dirname
+from os.path import realpath
 
 '''
-# This works with non-excel generated .csv
+#For non-excel generated .csv
 with open('Book2.csv', 'rb') as f:
     reader = csv.reader(f)
     your_list = list(reader)
 '''
 
-# do this to go around the excel-generated csv issue
+# For excel-generated csv issue
 # filepath saves local file Book2.csv
 filepath = realpath('../../Book2.csv')
 print(filepath)
